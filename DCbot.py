@@ -96,20 +96,20 @@ async def stop_translation(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("現在、翻訳設定はありません。", ephemeral=True)
 
-@tree.command(name="switchLanguage", description="元の言語と翻訳先の言語を入れ替えます")
+@tree.command(name="switchlanguage", description="元の言語と翻訳先の言語を入れ替えます")
 async def switch_language(interaction: discord.Interaction):
     settings = user_settings.get(interaction.user.id)
     if settings is None:
         await interaction.response.send_message("翻訳設定が見つかりません。まず /translate で言語を設定してください。", ephemeral=True)
         return
 
-    # 入れ替え
     source = settings["source"]
     target = settings["target"]
     settings["source"], settings["target"] = target, source
     user_settings[interaction.user.id] = settings
 
     await interaction.response.send_message(f"翻訳設定を入れ替えました：{source} → {target} → {target} → {source}", ephemeral=True)
+
 
 
 @client.event

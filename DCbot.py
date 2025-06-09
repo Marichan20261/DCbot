@@ -4,19 +4,30 @@ import google.generativeai as genai
 import os
 import asyncio
 import re
+from flask import Flask
+from threading import Thread
 from dotenv import load_dotenv
 
 load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-ALLOWED_CHANNEL_IDS = [1373992192175247481, 1362259535380877436, 1127235433252786199, 1326922231682568368]  # ←ここに許可するチャンネルIDを入れてください
+ALLOWED_CHANNEL_IDS = [1373992192175247481, 1362259535380877436, 1127235433252786199, 1326922231682568368]
 
 intents = discord.Intents.default()
-intents.message_content = True  # 追加する
+intents.message_content = True
 client = discord.Client(intents=intents)
-
 tree = app_commands.CommandTree(client)
+
+app = Flask(__name__)
+
+def run_flask():
+    app.run(host="0.0.0.0", port=10000)
+
+@client.event
+async def on_ready():
+    await tree.sync()
+    print(f"Bot is ready. Logged in as {client.user}")
 
 genai.configure(api_key=GEMINI_API_KEY)
 
@@ -61,19 +72,12 @@ Only return the translated result. Do not add any explanation, commentary, or fo
 Text:
 {text}
 """
-
     try:
         model = genai.GenerativeModel('gemini-1.5-flash-latest')
         response = model.generate_content(prompt)
         return response.text.strip()
     except Exception as e:
         return f"翻訳に失敗しました: {e}"
-
-
-
-
-#        model = genai.GenerativeModel('gemini-1.5-flash-latest')
-
 
 @tree.command(name="translate", description="翻訳の元言語と翻訳先言語を設定します")
 @app_commands.describe(source="元の言語", target="翻訳先の言語")
@@ -88,6 +92,13 @@ async def set_language(interaction: discord.Interaction, source: app_commands.Ch
 @client.event
 async def on_message(message):
     if message.author.bot:
+        return
+
+    if isinstance(message.channel, discord.Thread):
+        parent_channel = message.channel.parent
+        if parent_channel and parent_channel.id not in ALLOWED_CHANNEL_IDS:
+            return
+    elif message.channel.id not in ALLOWED_CHANNEL_IDS:
         return
 
     content = message.content.strip() or message.clean_content.strip()
@@ -105,11 +116,7 @@ async def on_message(message):
     for chunk in chunks:
         await message.channel.send(chunk)
 
-
-
-@client.event
-async def on_ready():
-    await tree.sync()
-    print(f"Bot is ready. Logged in as {client.user}")
-
-client.run(DISCORD_TOKEN)
+if __name__ == '__main__':
+    flask_thread = Thread(target=run_flask)
+    flask_thread.start()
+    client.run(DISCORD_TOKEN)

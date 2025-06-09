@@ -89,6 +89,13 @@ async def set_language(interaction: discord.Interaction, source: app_commands.Ch
     user_settings[interaction.user.id] = {"source": source.value, "target": target.value}
     await interaction.response.send_message(f"翻訳設定を更新しました：{source.name} → {target.name}", ephemeral=True)
 
+@tree.command(name="stop", description="自分の翻訳設定を解除します")
+async def stop_translation(interaction: discord.Interaction):
+    if user_settings.pop(interaction.user.id, None) is not None:
+        await interaction.response.send_message("翻訳設定を解除しました。", ephemeral=True)
+    else:
+        await interaction.response.send_message("現在、翻訳設定はありません。", ephemeral=True)
+
 @client.event
 async def on_message(message):
     if message.author.bot:

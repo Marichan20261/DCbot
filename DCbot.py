@@ -21,6 +21,10 @@ tree = app_commands.CommandTree(client)
 
 app = Flask(__name__)
 
+@app.route("/", methods=["GET"])
+def index():
+    return "Bot is running!", 200
+
 def run_flask():
     app.run(host="0.0.0.0", port=10000)
 

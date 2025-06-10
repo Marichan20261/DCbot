@@ -62,16 +62,20 @@ def split_text(text, limit=2000):
 async def translate_with_gemini(text, source_lang, target_lang):
     if source_lang == "auto":
         prompt = f"""You are a professional translator.
-Translate the following text to {target_lang}.
-Only return the translated result. Do not add any explanation, commentary, or formatting.
+
+Please translate the following text into {target_lang}.
+If the translation requires context or has multiple possible meanings, list all plausible translations and include the relevant interpretation in square brackets.
+Do not add unrelated commentary.
 
 Text:
 {text}
 """
     else:
         prompt = f"""You are a professional translator.
-Translate the following text from {source_lang} to {target_lang}.
-Only return the translated result. Do not add any explanation, commentary, or formatting.
+
+Please translate the following text from {source_lang} to {target_lang}.
+If the translation requires context or has multiple possible meanings, list all plausible translations and include the relevant interpretation in square brackets.
+Do not add unrelated commentary.
 
 Text:
 {text}
@@ -82,6 +86,7 @@ Text:
         return response.text.strip()
     except Exception as e:
         return f"翻訳に失敗しました: {e}"
+
 
 @tree.command(name="translate", description="翻訳の元言語と翻訳先言語を設定します")
 @app_commands.describe(source="元の言語", target="翻訳先の言語")
@@ -96,9 +101,14 @@ async def set_language(interaction: discord.Interaction, source: app_commands.Ch
 @tree.command(name="stop", description="自分の翻訳設定を解除します")
 async def stop_translation(interaction: discord.Interaction):
     if user_settings.pop(interaction.user.id, None) is not None:
-        await interaction.response.send_message("翻訳を解除しました。", ephemeral=True)
+        try:
+            # 直近のBotのephemeralレスポンスを削除（ただし実際の実装では履歴を保持しないと厳しい）
+            await interaction.response.send_message("翻訳を解除しました。", ephemeral=True)
+        except Exception as e:
+            print(f"削除失敗: {e}")
     else:
         await interaction.response.send_message("現在、翻訳設定はありません。", ephemeral=True)
+
 
 @tree.command(name="switchlanguage", description="元の言語と翻訳先の言語を入れ替えます")
 async def switch_language(interaction: discord.Interaction):

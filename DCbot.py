@@ -110,6 +110,38 @@ async def switch_language(interaction: discord.Interaction):
 
     await interaction.response.send_message(f"翻訳設定を入れ替えました：{source} → {target} → {target} → {source}", ephemeral=True)
 
+@tree.command(name="translate_this", description="リプライ先のメッセージを翻訳します")
+@app_commands.describe(source="元の言語", target="翻訳先の言語")
+@app_commands.choices(
+    source=[app_commands.Choice(name=label, value=value) for label, value in LANGUAGE_CHOICES],
+    target=[app_commands.Choice(name=label, value=value) for label, value in LANGUAGE_CHOICES if value != "auto"]
+)
+async def translate_this(interaction: discord.Interaction, source: app_commands.Choice[str], target: app_commands.Choice[str]):
+    # リプライ先メッセージの取得
+    reference = interaction.message.reference if interaction.message else None
+
+    if not reference:
+        await interaction.response.send_message("このコマンドは翻訳したいメッセージにリプライして使用してください。", ephemeral=True)
+        return
+
+    # メッセージの取得（リプライ元）
+    try:
+        replied_message = await interaction.channel.fetch_message(reference.message_id)
+    except Exception:
+        await interaction.response.send_message("元のメッセージを取得できませんでした。", ephemeral=True)
+        return
+
+    if not replied_message.content.strip():
+        await interaction.response.send_message("リプライ先のメッセージがテキストを含んでいません。", ephemeral=True)
+        return
+
+    await interaction.response.defer(thinking=True, ephemeral=False)
+
+    translated = await translate_with_gemini(replied_message.content.strip(), source.value, target.value)
+    chunks = split_text(translated)
+
+    for chunk in chunks:
+        await interaction.followup.send(chunk)
 
 
 @client.event
@@ -117,6 +149,11 @@ async def on_message(message):
     if message.author.bot:
         return
 
+    # 非テキスト（例: 添付ファイルのみ）のメッセージを無視
+    if not message.content.strip():
+        return
+
+    # チャンネル制限の確認
     if isinstance(message.channel, discord.Thread):
         parent_channel = message.channel.parent
         if parent_channel and parent_channel.id not in ALLOWED_CHANNEL_IDS:
@@ -124,20 +161,15 @@ async def on_message(message):
     elif message.channel.id not in ALLOWED_CHANNEL_IDS:
         return
 
-    content = message.content.strip() or message.clean_content.strip()
-
-    if not content:
-        await message.channel.send("翻訳対象のテキストが空です。テキストを送ってください。")
-        return
-
     settings = user_settings.get(message.author.id)
     if not settings:
         return
 
-    translated = await translate_with_gemini(content, settings["source"], settings["target"])
+    translated = await translate_with_gemini(message.content.strip(), settings["source"], settings["target"])
     chunks = split_text(translated)
     for chunk in chunks:
         await message.channel.send(chunk)
+
 
 if __name__ == '__main__':
     flask_thread = Thread(target=run_flask)

@@ -110,12 +110,7 @@ async def switch_language(interaction: discord.Interaction):
 
     await interaction.response.send_message(f"翻訳設定を入れ替えました：{source} → {target} → {target} → {source}", ephemeral=True)
 
-@tree.command(name="translate_this", description="リプライ先のメッセージを翻訳します")
-@app_commands.describe(source="元の言語", target="翻訳先の言語")
-@app_commands.choices(
-    source=[app_commands.Choice(name=label, value=value) for label, value in LANGUAGE_CHOICES],
-    target=[app_commands.Choice(name=label, value=value) for label, value in LANGUAGE_CHOICES if value != "auto"]
-)
+#
 
 @client.event
 async def on_message(message):

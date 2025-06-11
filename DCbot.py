@@ -116,33 +116,6 @@ async def switch_language(interaction: discord.Interaction):
     source=[app_commands.Choice(name=label, value=value) for label, value in LANGUAGE_CHOICES],
     target=[app_commands.Choice(name=label, value=value) for label, value in LANGUAGE_CHOICES if value != "auto"]
 )
-async def translate_this(interaction: discord.Interaction, source: app_commands.Choice[str], target: app_commands.Choice[str]):
-    # リプライ先メッセージの取得
-    reference = interaction.message.reference if interaction.message else None
-
-    if not reference:
-        await interaction.response.send_message("このコマンドは翻訳したいメッセージにリプライして使用してください。", ephemeral=True)
-        return
-
-    # メッセージの取得（リプライ元）
-    try:
-        replied_message = await interaction.channel.fetch_message(reference.message_id)
-    except Exception:
-        await interaction.response.send_message("元のメッセージを取得できませんでした。", ephemeral=True)
-        return
-
-    if not replied_message.content.strip():
-        await interaction.response.send_message("リプライ先のメッセージがテキストを含んでいません。", ephemeral=True)
-        return
-
-    await interaction.response.defer(thinking=True, ephemeral=False)
-
-    translated = await translate_with_gemini(replied_message.content.strip(), source.value, target.value)
-    chunks = split_text(translated)
-
-    for chunk in chunks:
-        await interaction.followup.send(chunk)
-
 
 @client.event
 async def on_message(message):
